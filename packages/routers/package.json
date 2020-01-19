@@ -1,0 +1,50 @@
+{
+  "name": "@react-navigation/routers",
+  "description": "Routers to help build custom navigators",
+  "keywords": [
+    "react",
+    "react-native",
+    "react-navigation"
+  ],
+  "version": "5.0.0-alpha.25",
+  "license": "MIT",
+  "repository": "https://github.com/react-navigation/navigation-ex/tree/master/packages/routers",
+  "main": "lib/commonjs/index.js",
+  "react-native": "src/index.tsx",
+  "module": "lib/module/index.js",
+  "types": "lib/typescript/src/index.d.ts",
+  "files": [
+    "src",
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepare": "bob build",
+    "clean": "del lib"
+  },
+  "dependencies": {
+    "@react-navigation/core": "^5.0.0-alpha.35",
+    "shortid": "^2.2.15"
+  },
+  "devDependencies": {
+    "@react-native-community/bob": "^0.8.0",
+    "del-cli": "^3.0.0",
+    "typescript": "^3.7.4"
+  },
+  "@react-native-community/bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  }
+}
