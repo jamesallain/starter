@@ -1,3 +1,10 @@
+import { InMemoryCache } from 'apollo-cache-inmemory';
+import { ApolloClient } from 'apollo-client';
+import { BatchHttpLink } from 'apollo-link-batch-http';
+import { setContext } from 'apollo-link-context';
+import { HttpLink } from 'apollo-link-http';
+import { ApolloProvider } from 'react-apollo';
+
 import * as React from 'react';
 import {
   View,
@@ -38,15 +45,18 @@ import {
   HeaderStyleInterpolators,
 } from '@react-navigation/stack';
 
+import { getItem } from './components/localKeyStore';
+
 import LinkingPrefixes from './LinkingPrefixes';
-import SimpleStack from './Screens/SimpleStack';
-import NativeStack from './Screens/NativeStack';
-import ModalPresentationStack from './Screens/ModalPresentationStack';
-import BottomTabs from './Screens/BottomTabs';
-import MaterialTopTabsScreen from './Screens/MaterialTopTabs';
-import MaterialBottomTabs from './Screens/MaterialBottomTabs';
-import AuthFlow from './Screens/AuthFlow';
-import CompatAPI from './Screens/CompatAPI';
+import SimpleStack from './screens/SimpleStack';
+import NativeStack from './screens/NativeStack';
+import ModalPresentationStack from './screens/ModalPresentationStack';
+import BottomTabs from './screens/BottomTabs';
+import MaterialTopTabsScreen from './screens/MaterialTopTabs';
+import MaterialBottomTabs from './screens/MaterialBottomTabs';
+import AuthFlow from './screens/AuthFlow';
+import CompatAPI from './screens/CompatAPI';
+import Library from './screens/library/Library';
 
 YellowBox.ignoreWarnings(['Require cycle:', 'Warning: Async Storage']);
 
@@ -86,6 +96,31 @@ const SCREENS = {
     component: CompatAPI,
   },
 };
+const GRAPHQL_ENDPOINT = 'http://localhost:1100/graphql';
+const ENABLE_QUERY_BATCHING = true;
+
+const AuthenticatedLink = setContext(async (_, { headers }) => {
+  const token = await getItem('AuthToken', undefined);
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : null,
+    },
+  };
+});
+
+const httpLink = ENABLE_QUERY_BATCHING
+  ? new BatchHttpLink({ uri: GRAPHQL_ENDPOINT })
+  : new HttpLink({ uri: GRAPHQL_ENDPOINT });
+
+const client = new ApolloClient({
+  link: AuthenticatedLink.concat(httpLink),
+  // shouldBatch: true,
+  //addTypename: true,
+  cache: new InMemoryCache({
+    dataIdFromObject: (obj: any) => obj.nodeId || null,
+  }),
+});
 
 const Drawer = createDrawerNavigator<RootDrawerParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
@@ -177,111 +212,116 @@ export default function App() {
   }
 
   return (
-    <PaperProvider theme={paperTheme}>
-      {Platform.OS === 'ios' && (
-        <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} />
-      )}
-      <NavigationNativeContainer
-        ref={containerRef}
-        initialState={initialState}
-        onStateChange={state =>
-          AsyncStorage.setItem(
-            NAVIGATION_PERSISTENCE_KEY,
-            JSON.stringify(state)
-          )
-        }
-        theme={theme}
-      >
-        <Drawer.Navigator>
-          <Drawer.Screen
-            name="Root"
-            options={{
-              title: 'Examples',
-              drawerIcon: ({ size, color }) => (
-                <MaterialIcons size={size} color={color} name="folder" />
-              ),
-            }}
-          >
-            {({
-              navigation,
-            }: {
-              navigation: DrawerNavigationProp<RootDrawerParamList>;
-            }) => (
-              <Stack.Navigator
-                screenOptions={{
-                  headerStyleInterpolator: HeaderStyleInterpolators.forUIKit,
-                }}
-              >
-                <Stack.Screen
-                  name="Home"
-                  options={{
-                    title: 'Examples',
-                    headerLeft: () => (
-                      <Appbar.Action
-                        color={theme.colors.text}
-                        icon="menu"
-                        onPress={() => navigation.toggleDrawer()}
-                      />
-                    ),
+    <ApolloProvider client={client}>
+      <PaperProvider theme={paperTheme}>
+        {Platform.OS === 'ios' && (
+          <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} />
+        )}
+        <NavigationNativeContainer
+          ref={containerRef}
+          initialState={initialState}
+          onStateChange={state =>
+            AsyncStorage.setItem(
+              NAVIGATION_PERSISTENCE_KEY,
+              JSON.stringify(state)
+            )
+          }
+          theme={theme}
+        >
+          <Drawer.Navigator>
+            <Drawer.Screen
+              name="Root"
+              options={{
+                title: 'Examples',
+                drawerIcon: ({ size, color }) => (
+                  <MaterialIcons size={size} color={color} name="folder" />
+                ),
+              }}
+            >
+              {({
+                navigation,
+              }: {
+                navigation: DrawerNavigationProp<RootDrawerParamList>;
+              }) => (
+                <Stack.Navigator
+                  screenOptions={{
+                    headerStyleInterpolator: HeaderStyleInterpolators.forUIKit,
                   }}
                 >
-                  {({
-                    navigation,
-                  }: {
-                    navigation: StackNavigationProp<RootStackParamList>;
-                  }) => (
-                    <ScrollView
-                      style={{ backgroundColor: theme.colors.background }}
-                    >
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: 16,
-                        }}
-                      >
-                        <Subheading>Dark theme</Subheading>
-                        <Switch
-                          value={theme.dark}
-                          onValueChange={() => {
-                            AsyncStorage.setItem(
-                              THEME_PERSISTENCE_KEY,
-                              theme.dark ? 'light' : 'dark'
-                            );
-
-                            setTheme(t => (t.dark ? DefaultTheme : DarkTheme));
-                          }}
+                  <Stack.Screen
+                    name="Home"
+                    options={{
+                      title: 'Examples',
+                      headerLeft: () => (
+                        <Appbar.Action
+                          color={theme.colors.text}
+                          icon="menu"
+                          onPress={() => navigation.toggleDrawer()}
                         />
-                      </View>
-                      <Divider />
-                      {(Object.keys(SCREENS) as (keyof typeof SCREENS)[]).map(
-                        name => (
-                          <List.Item
-                            key={name}
-                            title={SCREENS[name].title}
-                            onPress={() => navigation.push(name)}
+                      ),
+                    }}
+                  >
+                    {({
+                      navigation,
+                    }: {
+                      navigation: StackNavigationProp<RootStackParamList>;
+                    }) => (
+                      <ScrollView
+                        style={{ backgroundColor: theme.colors.background }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: 16,
+                          }}
+                        >
+                          <Subheading>Dark theme</Subheading>
+                          <Switch
+                            value={theme.dark}
+                            onValueChange={() => {
+                              AsyncStorage.setItem(
+                                THEME_PERSISTENCE_KEY,
+                                theme.dark ? 'light' : 'dark'
+                              );
+
+                              setTheme(t =>
+                                t.dark ? DefaultTheme : DarkTheme
+                              );
+                            }}
                           />
-                        )
-                      )}
-                    </ScrollView>
+                        </View>
+                        <Divider />
+                        {(Object.keys(SCREENS) as (keyof typeof SCREENS)[]).map(
+                          name => (
+                            <List.Item
+                              key={name}
+                              title={SCREENS[name].title}
+                              onPress={() => navigation.push(name)}
+                            />
+                          )
+                        )}
+                      </ScrollView>
+                    )}
+                  </Stack.Screen>
+
+                  {(Object.keys(SCREENS) as (keyof typeof SCREENS)[]).map(
+                    name => (
+                      <Stack.Screen
+                        key={name}
+                        name={name}
+                        component={SCREENS[name].component}
+                        options={{ title: SCREENS[name].title }}
+                      />
+                    )
                   )}
-                </Stack.Screen>
-                {(Object.keys(SCREENS) as (keyof typeof SCREENS)[]).map(
-                  name => (
-                    <Stack.Screen
-                      key={name}
-                      name={name}
-                      component={SCREENS[name].component}
-                      options={{ title: SCREENS[name].title }}
-                    />
-                  )
-                )}
-              </Stack.Navigator>
-            )}
-          </Drawer.Screen>
-        </Drawer.Navigator>
-      </NavigationNativeContainer>
-    </PaperProvider>
+                </Stack.Navigator>
+              )}
+            </Drawer.Screen>
+          </Drawer.Navigator>
+        </NavigationNativeContainer>
+      </PaperProvider>
+    </ApolloProvider>
   );
 }

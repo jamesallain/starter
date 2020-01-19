@@ -1,0 +1,29 @@
+query CurrentUser {
+  currentUser {
+    nodeId
+    id
+    ...CurrentUser_User
+  }
+}
+
+fragment CurrentUser_User on User {
+  nodeId
+  id
+  name
+  bio
+  isAdmin
+  isVerified
+  credentials
+  username
+  avatarUrl
+  practitionerStatus
+  createdAt
+  updatedAt
+  organizationUsersByUserId(first: 20) {
+    nodes {
+      nodeId
+      id
+      organizationId
+    }
+  }
+}

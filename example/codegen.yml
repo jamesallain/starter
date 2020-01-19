@@ -1,0 +1,21 @@
+overwrite: true
+schema: '../../nosh-server/data/schema.graphql'
+#documents: "**/*.graphql"
+#documents: "**/web/*.graphql"
+#documents: "../../../server/db/graphql/**/*.graphql"
+documents: 'src/**/*.graphql'
+
+config:
+  namingConvention: keep
+  withHOC: false
+  withComponent: false
+  withHooks: true
+  noGraphQLTag: false
+  withMutationFn: false
+  hooksImportFrom: '@apollo/react-hooks'
+generates:
+  src/graphql.tsx:
+    plugins:
+      - 'typescript'
+      - 'typescript-operations'
+      - 'typescript-react-apollo'
